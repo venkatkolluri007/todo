@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>My Tasks</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --surface: #f5f5f5;
+  --surface2: #ebebeb;
+  --border: rgba(0,0,0,0.08);
+  --text: #111111;
+  --text2: #555555;
+  --text3: #999999;
+  --accent: #1a6b3a;
+  --accent-dim: rgba(26,107,58,0.08);
+  --high: #c0392b;
+  --med: #d4720a;
+  --low: #1a6b9a;
+  --high-dim: rgba(192,57,43,0.08);
+  --med-dim: rgba(212,114,10,0.08);
+  --low-dim: rgba(26,107,154,0.08);
+  --radius: 14px;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'Instrument Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+
+/* App shell */
+.app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 100px; }
+
+/* Header */
+.header { padding: 52px 24px 20px; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.app-title { font-family: var(--font-head); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.task-count { font-size: 13px; color: var(--text2); font-family: var(--font-body); }
+.header-sub { font-size: 13px; color: var(--text3); }
+
+/* API key bar */
+.api-bar { margin: 0 16px 8px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+.api-bar-inner { display: flex; align-items: center; gap: 0; }
+.api-icon { padding: 0 12px; font-size: 16px; }
+.api-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text2); font-size: 12px; font-family: var(--font-body); padding: 12px 0; }
+.api-input::placeholder { color: var(--text3); }
+.api-save { padding: 8px 14px; margin: 6px 6px 6px 0; border-radius: 8px; background: var(--accent-dim); color: var(--accent); border: none; font-size: 12px; font-family: var(--font-head); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.api-save:active { opacity: 0.7; }
+.api-status { font-size: 11px; color: var(--text3); padding: 0 14px 10px; }
+.api-status.ok { color: var(--accent); }
+
+/* AI button */
+.ai-section { padding: 8px 16px 16px; }
+.ai-btn { width: 100%; padding: 14px; border-radius: var(--radius); background: var(--accent-dim); border: 1px solid rgba(200,240,96,0.2); color: var(--accent); font-family: var(--font-head); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; }
+.ai-btn:active { background: rgba(200,240,96,0.2); }
+.ai-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ai-result { margin-top: 12px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; font-size: 13px; color: var(--text2); line-height: 1.7; display: none; white-space: pre-wrap; }
+.ai-result.show { display: block; animation: fadeIn 0.2s ease; }
+
+/* Add task */
+.add-section { padding: 0 16px 16px; }
+.add-row { display: flex; gap: 8px; align-items: center; }
+.add-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; font-size: 15px; font-family: var(--font-body); color: var(--text); outline: none; transition: border-color 0.15s; }
+.add-input:focus { border-color: rgba(200,240,96,0.3); }
+.add-input::placeholder { color: var(--text3); }
+.add-btn { width: 48px; height: 48px; border-radius: 12px; background: var(--accent); color: #0f0f0f; border: none; font-size: 24px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; transition: transform 0.1s; }
+.add-btn:active { transform: scale(0.92); }
+
+/* Filter tabs */
+.filters { display: flex; gap: 6px; padding: 0 16px 16px; overflow-x: auto; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn { padding: 7px 16px; border-radius: 100px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 13px; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+.filter-btn.active { background: var(--surface2); color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+/* Section label */
+.section-label { font-family: var(--font-head); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); padding: 0 20px 10px; }
+
+/* Task list */
+.task-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.task-item { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; animation: fadeIn 0.2s ease; transition: opacity 0.2s; }
+.task-item.done { opacity: 0.45; }
+
+.check-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); background: transparent; cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.check-btn.checked { background: var(--accent); border-color: var(--accent); }
+.check-btn.checked::after { content: '✓'; font-size: 12px; color: #0f0f0f; font-weight: 700; }
+
+.task-body { flex: 1; min-width: 0; }
+.task-title { font-size: 15px; color: var(--text); line-height: 1.4; word-break: break-word; }
+.task-item.done .task-title { text-decoration: line-through; color: var(--text3); }
+.task-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.priority-chip { font-size: 11px; padding: 3px 10px; border-radius: 100px; font-family: var(--font-head); font-weight: 600; cursor: pointer; }
+.p-high { background: var(--high-dim); color: var(--high); }
+.p-medium { background: var(--med-dim); color: var(--med); }
+.p-low { background: var(--low-dim); color: var(--low); }
+.task-date { font-size: 11px; color: var(--text3); }
+
+.del-btn { background: transparent; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; transition: color 0.15s; }
+.del-btn:active { color: var(--high); }
+
+/* Empty state */
+.empty { text-align: center; padding: 48px 24px; color: var(--text3); font-size: 14px; line-height: 1.8; }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+/* Bottom nav */
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 12px 24px 28px; display: flex; justify-content: space-around; }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: var(--text3); font-family: var(--font-head); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; padding: 4px 16px; border-radius: 10px; transition: color 0.15s; }
+.nav-item.active { color: var(--accent); }
+.nav-icon { font-size: 20px; }
+
+/* Priority picker modal */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: flex-end; justify-content: center; }
+.modal-bg.show { display: flex; }
+.modal { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 20px 20px 40px; }
+.modal-title { font-family: var(--font-head); font-size: 16px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+.priority-options { display: flex; flex-direction: column; gap: 10px; }
+.p-option { padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 15px; font-family: var(--font-body); cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px; }
+.p-option:active { opacity: 0.7; }
+.p-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* PIN lock */
+#pin-screen { position: fixed; inset: 0; background: var(--bg); z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; }
+#pin-screen.hidden { display: none; }
+.pin-title { font-family: var(--font-head); font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.pin-sub { font-size: 13px; color: var(--text3); margin-bottom: 36px; }
+.pin-dots { display: flex; gap: 16px; margin-bottom: 36px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: transparent; transition: background 0.15s, border-color 0.15s; }
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+.pin-dot.error { background: var(--high); border-color: var(--high); }
+.pin-keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-key { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); font-family: var(--font-head); font-size: 22px; font-weight: 600; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; user-select: none; }
+.pin-key:active { background: var(--surface2); }
+.pin-key.empty { border: none; background: transparent; cursor: default; }
+.pin-error { font-size: 13px; color: var(--high); margin-top: 20px; min-height: 20px; }
+
+
+/* Animations on load */
+.task-item:nth-child(1) { animation-delay: 0.05s; }
+.task-item:nth-child(2) { animation-delay: 0.1s; }
+.task-item:nth-child(3) { animation-delay: 0.15s; }
+.task-item:nth-child(4) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+
+<!-- PIN Lock Screen -->
+<div id="pin-screen">
+  <div class="pin-title">My Tasks</div>
+  <div class="pin-sub">Enter your PIN to continue</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key empty"></button>
+    <button class="pin-key" onclick="pinPress('0')">0</button>
+    <button class="pin-key" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+</div>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="app-title">My Tasks</div>
+      <div class="task-count" id="task-count"></div>
+    </div>
+    <div class="header-sub" id="header-date"></div>
+  </div>
+
+  <!-- API Key -->
+  <div class="api-bar">
+    <div class="api-bar-inner">
+      <div class="api-icon">🔑</div>
+      <input class="api-input" type="password" id="api-key" placeholder="Anthropic API key (sk-ant-...)">
+      <button class="api-save" onclick="saveKey()">Save</button>
+    </div>
+    <div class="api-status" id="api-status">Enter your key to enable AI features</div>
+  </div>
+
+  <!-- AI Section -->
+  <div class="ai-section">
+    <button class="ai-btn" id="ai-btn" onclick="getAISuggestions()">
+      <span>✦</span> Ask Claude to prioritize my tasks
+    </button>
+    <div class="ai-result" id="ai-result"></div>
+  </div>
+
+  <!-- Add Task -->
+  <div class="add-section">
+    <div class="add-row">
+      <input class="add-input" type="text" id="new-task" placeholder="Add a new task..." maxlength="120">
+      <button class="add-btn" onclick="addTask()">+</button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('active', this)">Active</button>
+    <button class="filter-btn" onclick="setFilter('done', this)">Done</button>
+    <button class="filter-btn" onclick="setFilter('high', this)">🔴 High</button>
+    <button class="filter-btn" onclick="setFilter('medium', this)">🟠 Medium</button>
+    <button class="filter-btn" onclick="setFilter('low', this)">🔵 Low</button>
+  </div>
+
+  <!-- Task list -->
+  <div class="section-label" id="list-label">Tasks</div>
+  <div class="task-list" id="task-list"></div>
+
+</div>
+
+<!-- Priority picker modal -->
+<div class="modal-bg" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">Set priority</div>
+    <div class="priority-options">
+      <button class="p-option" onclick="setPriority('high')"><span class="p-dot" style="background:var(--high)"></span> High — urgent, do first</button>
+      <button class="p-option" onclick="setPriority('medium')"><span class="p-dot" style="background:var(--med)"></span> Medium — important, schedule it</button>
+      <button class="p-option" onclick="setPriority('low')"><span class="p-dot" style="background:var(--low)"></span> Low — nice to do, no rush</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-tasks">
+    <div class="nav-icon">☑</div>
+    <div>Tasks</div>
+  </div>
+  <div class="nav-item" id="nav-settings" onclick="toggleSettings()">
+    <div class="nav-icon">⚙</div>
+    <div>Settings</div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+let tasks = JSON.parse(localStorage.getItem('vktasks') || 'null') || [
+  { id: 1, title: "Nutter invoice", priority: "high", done: false, created: Date.now() },
+  { id: 2, title: "Property tax", priority: "high", done: false, created: Date.now() },
+  { id: 3, title: "Testcadia trademark", priority: "high", done: false, created: Date.now() },
+  { id: 4, title: "FJ servicing", priority: "high", done: false, created: Date.now() },
+  { id: 5, title: "Honda mirror fix", priority: "medium", done: false, created: Date.now() },
+  { id: 6, title: "Set up YA sunday calls", priority: "medium", done: false, created: Date.now() },
+  { id: 7, title: "Gpt.kolluri.com", priority: "medium", done: false, created: Date.now() },
+  { id: 8, title: "Testcadia free guide", priority: "low", done: false, created: Date.now() },
+  { id: 9, title: "Update DJ shivkuation videos", priority: "low", done: false, created: Date.now() }
+];
+let apiKey = localStorage.getItem('vk_apikey') || '';
+let currentFilter = 'all';
+let editingTaskId = null;
+let nextId = Math.max(...tasks.map(t => t.id), 0) + 1;
+
+// ── Init ───────────────────────────────────────────────
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+if (apiKey) {
+  document.getElementById('api-key').value = apiKey;
+  document.getElementById('api-status').textContent = '✓ API key saved';
+  document.getElementById('api-status').classList.add('ok');
+}
+document.getElementById('new-task').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+render();
+
+// ── Save ───────────────────────────────────────────────
+function save() { localStorage.setItem('vktasks', JSON.stringify(tasks)); }
+
+function saveKey() {
+  apiKey = document.getElementById('api-key').value.trim();
+  localStorage.setItem('vk_apikey', apiKey);
+  const st = document.getElementById('api-status');
+  st.textContent = apiKey ? '✓ API key saved' : 'Enter your key to enable AI features';
+  st.className = 'api-status' + (apiKey ? ' ok' : '');
+}
+
+// ── Render ─────────────────────────────────────────────
+function render() {
+  const list = document.getElementById('task-list');
+  const label = document.getElementById('list-label');
+
+  let filtered = tasks;
+  if (currentFilter === 'active') filtered = tasks.filter(t => !t.done);
+  else if (currentFilter === 'done') filtered = tasks.filter(t => t.done);
+  else if (['high','medium','low'].includes(currentFilter)) filtered = tasks.filter(t => t.priority === currentFilter && !t.done);
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    const p = { high: 0, medium: 1, low: 2 };
+    return (p[a.priority] ?? 1) - (p[b.priority] ?? 1);
+  });
+
+  const active = tasks.filter(t => !t.done).length;
+  document.getElementById('task-count').textContent = active + ' remaining';
+  label.textContent = filtered.length + ' task' + (filtered.length !== 1 ? 's' : '');
+
+  if (sorted.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">${currentFilter === 'done' ? '🎉' : '✦'}</div>${currentFilter === 'done' ? 'No completed tasks yet' : 'No tasks here — add one above!'}</div>`;
+    return;
+  }
+
+  list.innerHTML = sorted.map(t => `
+    <div class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}">
+      <button class="check-btn ${t.done ? 'checked' : ''}" onclick="toggleDone(${t.id})"></button>
+      <div class="task-body">
+        <div class="task-title">${escHtml(t.title)}</div>
+        <div class="task-meta">
+          <span class="priority-chip p-${t.priority}" onclick="openModal(${t.id})">${t.priority}</span>
+        </div>
+      </div>
+      <button class="del-btn" onclick="deleteTask(${t.id})">×</button>
+    </div>
+  `).join('');
+}
+
+// ── Task actions ───────────────────────────────────────
+function addTask() {
+  const input = document.getElementById('new-task');
+  const title = input.value.trim();
+  if (!title) return;
+  tasks.unshift({ id: nextId++, title, priority: 'medium', done: false, created: Date.now() });
+  input.value = '';
+  save();
+  render();
+}
+
+function toggleDone(id) {
+  const t = tasks.find(x => x.id === id);
+  if (t) { t.done = !t.done; save(); render(); }
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(x => x.id !== id);
+  save();
+  render();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+// ── Priority modal ─────────────────────────────────────
+function openModal(id) {
+  editingTaskId = id;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('show');
+}
+function setPriority(p) {
+  const t = tasks.find(x => x.id === editingTaskId);
+  if (t) { t.priority = p; save(); render(); }
+  document.getElementById('modal').classList.remove('show');
+}
+
+// ── AI ─────────────────────────────────────────────────
+async function getAISuggestions() {
+  if (!apiKey) {
+    alert('Please enter your Anthropic API key first.');
+    return;
+  }
+  const active = tasks.filter(t => !t.done);
+  if (active.length === 0) { alert('No active tasks to prioritize!'); return; }
+
+  const btn = document.getElementById('ai-btn');
+  const result = document.getElementById('ai-result');
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Claude is thinking...';
+  result.classList.remove('show');
+
+  const taskList = active.map((t, i) => `${i + 1}. ${t.title} (currently: ${t.priority})`).join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: 'You are a sharp personal productivity coach. Analyze the user\'s to-do list and give practical, direct advice. Be concise — 3-4 short paragraphs max. No bullet points. Tell them what to do first and why, spot any quick wins, and flag anything time-sensitive.',
+        messages: [{ role: 'user', content: `Here are my tasks:\n\n${taskList}\n\nWhat should I tackle first and why? Any quick wins or urgent items I should know about?` }]
+      })
+    });
+    const data = await res.json();
+    if (data.content && data.content[0]) {
+      result.textContent = data.content[0].text;
+      result.classList.add('show');
+    } else {
+      result.textContent = 'Something went wrong. Check your API key.';
+      result.classList.add('show');
+    }
+  } catch (e) {
+    result.textContent = 'Could not connect. Check your API key and try again.';
+    result.classList.add('show');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span>✦</span> Ask Claude to prioritize my tasks';
+}
+
+function toggleSettings() {
+  const bar = document.querySelector('.api-bar');
+  bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+}
+
+
+// ── PIN Lock ───────────────────────────────────────────
+const CORRECT_PIN = '3282';
+let pinEntry = '';
+
+function checkPinUnlocked() {
+  if (sessionStorage.getItem('pin_unlocked') === '1') {
+    document.getElementById('pin-screen').classList.add('hidden');
+  }
+}
+
+function pinPress(digit) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += digit;
+  updatePinDots();
+  if (pinEntry.length === 4) {
+    setTimeout(() => {
+      if (pinEntry === CORRECT_PIN) {
+        sessionStorage.setItem('pin_unlocked', '1');
+        document.getElementById('pin-screen').classList.add('hidden');
+        pinEntry = '';
+        updatePinDots();
+      } else {
+        document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+        document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
+        setTimeout(() => {
+          pinEntry = '';
+          updatePinDots();
+          document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+          document.getElementById('pin-error').textContent = '';
+        }, 800);
+      }
+    }, 100);
+  }
+}
+
+function pinDel() {
+  pinEntry = pinEntry.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('d' + i);
+    dot.classList.toggle('filled', i < pinEntry.length);
+  }
+}
+
+checkPinUnlocked();
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
